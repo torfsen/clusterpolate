@@ -32,32 +32,42 @@ import math
 from PIL import Image
 
 
-def _gauss(r, sd=None):
+__all__ = ['bounding_box', 'gradient', 'heatmap', 'interpolate']
+
+
+def _gauss(rx, ry, sdx=None, sdy=None):
     """
     Create Gaussian blob image.
 
-    ``r`` is the image radius. The actual image width and height are
-    both ``2 * r + 1``. The returned image has mode ``F``. Values are
-    normalized so that the image center has value ``255``.
+    ``rx`` and ``ry`` are the image radii in ``x`` and ``y`` direction,
+    respectively. The actual image width and height are ``2 * rx + 1``
+    and ``2 * ry + 1``, respectively. The returned image has mode ``F``.
+    Values are normalized so that the image center has value ``255``.
 
-    If the standard deviation ``sd`` is not given then it is chosen so
-    that the border pixels have values smaller than ``0.5``.
+    ``sdx`` and ``sdy`` are the standard deviations in ``x`` and ``y``
+    direction, respectively. If they are not given then they are chosen
+    so that the border pixels have values smaller than ``0.5``.
     """
-    if sd is None:
-        sd = r / (-2 * math.log(0.5 / 255))**0.5
-    quarter = Image.new('F', (r + 1, r + 1), 0)
-    denom = 1 / (2 * sd * sd)
+    def sd_for_r(r):
+        return r / (-2 * math.log(0.5 / 255))**0.5
+
+    sdx = sdx or sd_for_r(rx)
+    sdy = sdy or sd_for_r(ry)
+    quarter = Image.new('F', (rx + 1, ry + 1), 0)
+    dx = 1 / sdx**2
+    dy = 1 / sdy**2
     data = []
-    for x in range(r + 1):
-        for y in range(r + 1):
-            sqr_dist = (x - r)**2 + (y - r)**2
-            data.append(math.exp(-sqr_dist * denom))
+    for y in range(ry + 1):
+        vy = dy * (y - ry)**2
+        for x in range(rx + 1):
+            vx = dx * (x - rx)**2
+            data.append(math.exp(-0.5 * (vx + vy)))
     quarter.putdata(data, 255)
-    img = Image.new('L', (2 * r + 1, 2 * r + 1), 0)
+    img = Image.new('L', (2 * rx + 1, 2 * ry + 1), 0)
     img.paste(quarter, (0, 0))
-    img.paste(quarter.rotate(90), (0, r + 1))
-    img.paste(quarter.rotate(180), (r + 1, r + 1))
-    img.paste(quarter.rotate(270), (r + 1, 0))
+    img.paste(quarter.transpose(Image.FLIP_TOP_BOTTOM), (0, ry + 1))
+    img.paste(quarter.transpose(Image.ROTATE_180), (rx + 1, ry + 1))
+    img.paste(quarter.transpose(Image.FLIP_LEFT_RIGHT), (rx + 1, 0))
     return img
 
 
@@ -84,7 +94,7 @@ def _add_image(img1, img2, p=(0, 0), factor=1):
             pix1[x, y] += factor * pix2[x - p0, y - p1]
 
 
-def heatmap(points, area, size=(100, 100), radius=5, default_intensity=1,
+def heatmap(points, area=None, size=(100, 100), radius=5, default_intensity=1,
             colorize=None, mode='RGBA'):
     """
     Create a heat map image.
@@ -97,11 +107,13 @@ def heatmap(points, area, size=(100, 100), radius=5, default_intensity=1,
     The area covered by the heat map is given by the 2x2 array ``area``:
     The upper left pixel of the image corresponds to the coordinates
     ``(area[0][0], area[0][1])`` while the lower right pixel corresponds
-    to ``(area[1][0], area[1][1])``.
+    to ``(area[1][0], area[1][1])``. If ``area`` is not given then the
+    bounding box of the points is used.
 
     The size of the image in pixels is given by the 2-tuple ``size``.
 
-    ``radius`` specifies the radius of the blobs, in pixels.
+    ``radius`` specifies the radius of the blobs, in point coordinate
+    units.
 
     ``colorize`` is an optional callback that converts raw (i.e. float)
     intensity values into color tuples. The length of the color tuples
@@ -115,10 +127,18 @@ def heatmap(points, area, size=(100, 100), radius=5, default_intensity=1,
     All coordinates are in the image coordinate system, i.e. the upper
     left corner has the coordinates ``(0, 0)``.
     """
+    if area is None:
+        points = list(points)  # In case ``points`` is a generator
+        if len(points) < 2:
+            raise ValueError('Need at least 2 points for automatic area ' +
+                             'calculation.')
+        area = bounding_box(points)
     img = Image.new('F', size, 0)
-    kernel = _gauss(radius)
     width_factor = size[0] / (area[1][0] - area[0][0])
     height_factor = size[1] / (area[1][1] - area[0][1])
+    rx = int(radius * width_factor)
+    ry = int(radius * height_factor)
+    kernel = _gauss(rx, ry)
     for point in points:
         try:
             intensity = point[2]
@@ -126,7 +146,7 @@ def heatmap(points, area, size=(100, 100), radius=5, default_intensity=1,
             intensity = default_intensity
         x = (point[0] - area[0][0]) * width_factor
         y = (point[1] - area[0][1]) * height_factor
-        _add_image(img, kernel, (x - radius - 1, y - radius - 1), intensity)
+        _add_image(img, kernel, (x - rx - 1, y - ry - 1), intensity)
     if colorize:
         data = [colorize(d / 255.0) for d in img.getdata()]
         if mode != 'F':
@@ -191,6 +211,30 @@ def gradient(stops):
     return colorize
 
 
+def bounding_box(points):
+    """
+    Compute a point cloud's bounding box.
+
+    Returns the bounding box of the given points. Each point is a tuple
+    or list with at least 2 entries (its x and y coordinates).
+
+    The return value is a 2x2 tuple containing the upper left and the
+    lower right bounding box corners.
+    """
+    left = top = float('Inf')
+    right = bottom = float('-Inf')
+    for point in points:
+        if point[0] < left:
+            left = point[0]
+        if point[0] > right:
+            right = point[0]
+        if point[1] < top:
+            top = point[1]
+        if point[1] > bottom:
+             bottom = point[1]
+    return ((left, top), (right, bottom))
+
+
 if __name__ == '__main__':
 
     from random import uniform
@@ -209,9 +253,9 @@ if __name__ == '__main__':
 
     img = heatmap(
         points,
-        area=((0, 0), (s, s)),
-        size=(200, 200),
-        radius=25,
+        area=((0, 0), (100, 200)),
+        size=(400, 400),
+        radius=10,
         colorize=colorize
     )
     img.show()
