@@ -42,11 +42,11 @@ def _gauss(rx, ry, sdx=None, sdy=None):
     ``rx`` and ``ry`` are the image radii in ``x`` and ``y`` direction,
     respectively. The actual image width and height are ``2 * rx + 1``
     and ``2 * ry + 1``, respectively. The returned image has mode ``F``.
-    Values are normalized so that the image center has value ``255``.
+    Values are normalized so that the image center has value ``1``.
 
     ``sdx`` and ``sdy`` are the standard deviations in ``x`` and ``y``
     direction, respectively. If they are not given then they are chosen
-    so that the border pixels have values smaller than ``0.5``.
+    so that the border pixels have values smaller than ``0.5 / 255``.
     """
     def sd_for_r(r):
         return r / (-2 * math.log(0.5 / 255))**0.5
@@ -62,8 +62,8 @@ def _gauss(rx, ry, sdx=None, sdy=None):
         for x in range(rx + 1):
             vx = dx * (x - rx)**2
             data.append(math.exp(-0.5 * (vx + vy)))
-    quarter.putdata(data, 255)
-    img = Image.new('L', (2 * rx + 1, 2 * ry + 1), 0)
+    quarter.putdata(data)
+    img = Image.new('F', (2 * rx + 1, 2 * ry + 1), 0)
     img.paste(quarter, (0, 0))
     img.paste(quarter.transpose(Image.FLIP_TOP_BOTTOM), (0, ry + 1))
     img.paste(quarter.transpose(Image.ROTATE_180), (rx + 1, ry + 1))
@@ -126,6 +126,8 @@ def heatmap(points, area=None, size=(100, 100), radius=5, default_intensity=1,
 
     All coordinates are in the image coordinate system, i.e. the upper
     left corner has the coordinates ``(0, 0)``.
+
+    The return value is an :py:class:`Image` instance.
     """
     if area is None:
         points = list(points)  # In case ``points`` is a generator
@@ -148,7 +150,7 @@ def heatmap(points, area=None, size=(100, 100), radius=5, default_intensity=1,
         y = (point[1] - area[0][1]) * height_factor
         _add_image(img, kernel, (x - rx - 1, y - ry - 1), intensity)
     if colorize:
-        data = [colorize(d / 255.0) for d in img.getdata()]
+        data = map(colorize, img.getdata())
         if mode != 'F':
             data = [tuple(int(x) for x in t) for t in data]
         img = Image.new(mode, size)
