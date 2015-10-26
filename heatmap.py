@@ -95,14 +95,15 @@ def _add_image(img1, img2, p=(0, 0), factor=1):
 
 
 def heatmap(points, area=None, size=(100, 100), radius=5, default_intensity=1,
-            colorize=None, mode='RGBA'):
+            colorize=None, mode='RGBA', intensity_factor=1):
     """
     Create a heat map image.
 
     ``points`` is a list of points, each of which is a tuple or list
     with at least 2 entries (the x and y coordinates). An optional third
     entry specifies the point's intensity, which defaults to
-    ``default_intensity``.
+    ``default_intensity``. Use ``intensity_factor`` to scale all
+    intensities (including the default intensity) by a common factor.
 
     The area covered by the heat map is given by the 2x2 array ``area``:
     The upper left pixel of the image corresponds to the coordinates
@@ -148,6 +149,7 @@ def heatmap(points, area=None, size=(100, 100), radius=5, default_intensity=1,
             intensity = default_intensity
         x = (point[0] - area[0][0]) * width_factor
         y = (point[1] - area[0][1]) * height_factor
+        intensity *= intensity_factor
         _add_image(img, kernel, (x - rx - 1, y - ry - 1), intensity)
     if colorize:
         data = map(colorize, img.getdata())
@@ -242,23 +244,24 @@ if __name__ == '__main__':
     from random import uniform
 
     n = 100
-    i = (0.5, 1)
+    i = (0.25, 1)
     s = 100
 
     points = [(uniform(0, s), uniform(0, s), uniform(*i)) for _ in range(n)]
 
     colorize = gradient({
         0.0: (0, 0, 0, 0),
-        0.5: (255, 0, 0, 255),
+        0.5: (255, 0, 0, 128),
         1.0: (0, 255, 0, 255)}
     )
 
     img = heatmap(
         points,
-        area=((0, 0), (100, 200)),
+        area=((0, 0), (100, 100)),
         size=(400, 400),
-        radius=10,
-        colorize=colorize
+        radius=20,
+        colorize=colorize,
+        intensity_factor=0.5,
     )
     img.show()
 
