@@ -47,7 +47,8 @@ Raw clusterpolation is available via :py:func:`clusterpolate` and images
 of clusterpolated data can be generated via :py:func:`image`.
 """
 
-from __future__ import division
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import numpy as np
 import PIL.Image

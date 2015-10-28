@@ -4,6 +4,7 @@
 /dist/
 /.coverage
 /coverage/
+/.tox/
 
 *.pyc
 .*.swp

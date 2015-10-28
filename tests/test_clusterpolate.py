@@ -28,7 +28,6 @@ Tests for the ``clusterpolate`` package.
 import math
 
 from matplotlib.cm import summer
-import matplotlib.pyplot as plt
 import numpy as np
 from nose.tools import eq_ as eq, ok_ as ok, raises
 
