@@ -27,6 +27,7 @@ import re
 import sys
 
 from setuptools import find_packages, setup
+import versioneer
 
 HERE = os.path.dirname(__file__)
 SOURCE_FILE = os.path.join(HERE, 'src', 'clusterpolate', '__init__.py')
@@ -58,7 +59,8 @@ setup(
     description=description,
     long_description=long_description,
     url='https://github.com/torfsen/clusterpolate',
-    version='0.1.0',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     license='MIT',
     keywords='interpolation extrapolation data cluster scattered heatmap'.split(),
     classifiers=[
