@@ -28,7 +28,7 @@ Traditional approaches for inter- and extrapolation of scattered data
 work on a filled rectangular area surrounding the data points or in
 their filled convex hull. However, scattered data often consists of
 different clusters of irregular shapes and usually contains areas where
-there is simply no data. Forcing such data into a traditional inter-
+there simply is no data. Forcing such data into a traditional inter-
 or extrapolation scheme often does not lead to the desired results.
 
 Heatmaps, on the other hand, deal well with scattered data but often do
@@ -163,7 +163,8 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     This function returns 4 values: The first 3 are arrays containing
     the pixel coordinates, the clusterpolated values, and the membership
     degrees. The last one is the generated image as an instance of
-    :py:class:`PIL.Image.Image`.
+    :py:class:`PIL.Image.Image`. Note that the predictions are returned
+    unnormalized.
     """
     if area is None:
         if len(points) < 2:
@@ -181,12 +182,14 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     if normalize:
         pmin = predictions.min()
         pmax = predictions.max()
-        predictions = (predictions - pmin) / (pmax - pmin)
+        normalized = (predictions - pmin) / (pmax - pmin)
+    else:
+        normalized = predictions
     if colormap is None:
-        bands = (PIL.Image.fromarray(np.uint8(255 * predictions)),)
+        bands = (PIL.Image.fromarray(np.uint8(255 * normalized)),)
         mode = 'LA'
     else:
-        rgba = PIL.Image.fromarray(np.uint8(255 * colormap(predictions)))
+        rgba = PIL.Image.fromarray(np.uint8(255 * colormap(normalized)))
         bands = rgba.split()[:3]
         mode = 'RGBA'
     alpha = PIL.Image.fromarray(np.uint8(255 * memberships))
@@ -206,22 +209,4 @@ def bounding_box(points):
     """
     p = np.array(points)
     return ((p[:, 0].min(), p[:, 1].min()), (p[:, 0].max(), p[:, 1].max()))
-
-
-if __name__ == '__main__':
-
-    import math
-    from matplotlib.cm import summer
-
-    n = 500
-    angles = np.random.normal(0, 0.75, n) - 0.1 * math.pi
-    radii = np.random.normal(1, 0.05, n)
-    points = np.vstack((radii * np.sin(angles), radii * np.cos(angles))).T
-    values = np.sin(angles) + np.random.normal(0, 0.5, n)
-    size = (400, 400)
-    area = ((-1.5, -1.5), (1.5, 1.5))
-
-    _, _, _, img = image(points, values, size, area, radius=0.2,
-                         colormap=summer)
-    img.save('clusterpolate.png')
 
