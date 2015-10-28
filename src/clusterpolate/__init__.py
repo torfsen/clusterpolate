@@ -181,6 +181,8 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     targets = np.vstack(np.meshgrid(x, y)).reshape(2, -1).T
 
     predictions, memberships = clusterpolate(points, values, targets, **kwargs)
+
+    targets = targets.reshape(size + (-1,))
     predictions = predictions.reshape(size[::-1])
     memberships = memberships.reshape(size[::-1])
 
@@ -200,7 +202,7 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     alpha = PIL.Image.fromarray(np.uint8(255 * memberships))
     bands += (alpha,)
     img = PIL.Image.merge(mode, bands)
-    return targets, predictions, memberships, img
+    return targets, predictions.T, memberships.T, img
 
 
 def bounding_box(points):

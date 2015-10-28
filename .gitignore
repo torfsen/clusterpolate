@@ -2,6 +2,8 @@
 /src/clusterpolate.egg-info/
 /build/
 /dist/
+/.coverage
+/coverage/
 
 *.pyc
 .*.swp
