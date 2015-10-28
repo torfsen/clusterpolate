@@ -175,8 +175,8 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     targets = np.vstack(np.meshgrid(x, y)).reshape(2, -1).T
 
     predictions, memberships = clusterpolate(points, values, targets, **kwargs)
-    predictions = predictions.reshape(size)
-    memberships = memberships.reshape(size)
+    predictions = predictions.reshape(size[::-1])
+    memberships = memberships.reshape(size[::-1])
 
     if normalize:
         pmin = predictions.min()
@@ -189,7 +189,7 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
         rgba = PIL.Image.fromarray(np.uint8(255 * colormap(predictions)))
         bands = rgba.split()[:3]
         mode = 'RGBA'
-    alpha = PIL.Image.fromarray(np.uint8(255 * memberships.reshape(size)))
+    alpha = PIL.Image.fromarray(np.uint8(255 * memberships))
     bands += (alpha,)
     img = PIL.Image.merge(mode, bands)
     return targets, predictions, memberships, img
