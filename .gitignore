@@ -1,4 +1,7 @@
 /venv/
+/src/clusterpolate.egg-info/
+/build/
+/dist/
 
 *.pyc
 .*.swp
