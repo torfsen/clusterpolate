@@ -39,3 +39,8 @@ Of course you can also use clusterpolation on your data without
 generating any images: simply use the `clusterpolate.clusterpolate`
 function.
 
+
+## Installation
+
+    pip install clusterpolate
+
