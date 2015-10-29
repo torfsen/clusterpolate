@@ -60,10 +60,12 @@ setup(
     description=description,
     long_description=long_description,
     url='https://github.com/torfsen/clusterpolate',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    version='0.1.0',
+    #version=versioneer.get_version(),
+    #cmdclass=versioneer.get_cmdclass(),
     license='MIT',
-    keywords='interpolation extrapolation data cluster scattered heatmap'.split(),
+    keywords="""interpolation extrapolation data cluster scattered heatmap
+                scatterplot""".split(),
     classifiers=[
         # Reference: http://pypi.python.org/pypi?%3Aaction=list_classifiers
         "Development Status :: 4 - Beta",
