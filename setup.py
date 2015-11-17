@@ -28,17 +28,21 @@ import re
 import sys
 
 from setuptools import find_packages, setup
-import versioneer
+
 
 HERE = os.path.dirname(__file__)
 SOURCE_FILE = os.path.join(HERE, 'src', 'clusterpolate', '__init__.py')
 
+version = None
 in_doc_str = False
 doc_lines = []
 with codecs.open(SOURCE_FILE, encoding='utf8') as f:
     for line in f:
         s = line.strip()
-        if s in ['"""', "'''"]:
+        m = re.match(r"""__version__\s*=\s*['"](.*)['"]""", line)
+        if m:
+            version = m.groups()[0]
+        elif s in ['"""', "'''"]:
             if in_doc_str:
                 in_doc_str = False
             elif not doc_lines:
@@ -46,6 +50,8 @@ with codecs.open(SOURCE_FILE, encoding='utf8') as f:
         elif in_doc_str:
             doc_lines.append(line)
 
+if not version:
+    raise RuntimeError('Could not extract version from "%s".' % SOURCE_FILE)
 if not doc_lines:
     raise RuntimeError('Could not extract doc string from "%s".' % SOURCE_FILE)
 
@@ -60,9 +66,7 @@ setup(
     description=description,
     long_description=long_description,
     url='https://github.com/torfsen/clusterpolate',
-    version='0.1.0',
-    #version=versioneer.get_version(),
-    #cmdclass=versioneer.get_cmdclass(),
+    version=version,
     license='MIT',
     keywords="""interpolation extrapolation data cluster scattered heatmap
                 scatterplot""".split(),

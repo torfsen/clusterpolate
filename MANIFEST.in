@@ -2,5 +2,3 @@ include requirements.txt
 include README.md
 include LICENSE
 
-include versioneer.py
-include src/clusterpolate/_version.py

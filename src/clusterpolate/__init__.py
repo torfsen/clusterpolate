@@ -61,10 +61,8 @@ import numpy as np
 import PIL.Image
 import sklearn.neighbors
 
-# Versioneer
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+
+__version__ = '0.2.0'
 
 
 __all__ = ['bounding_box', 'bump', 'clusterpolate', 'image']
