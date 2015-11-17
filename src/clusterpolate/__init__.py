@@ -50,6 +50,13 @@ of clusterpolated data can be generated via :py:func:`image`.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import multiprocessing
+import time
+try:
+    import Queue as queue  # Py2
+except ImportError:
+    import queue  # Py3
+
 import numpy as np
 import PIL.Image
 import sklearn.neighbors
@@ -84,8 +91,81 @@ def bump(r):
     return kernel
 
 
+class _Process(multiprocessing.Process):
+    """
+    Process with CTRL+C handling.
+
+    Used by internally by ``_map``.
+    """
+    def __init__(self, f, task, args, index, queue):
+        super(_Process, self).__init__()
+        self.index = index
+        self.f = f
+        self.task = task
+        self.args = args
+        self.queue = queue
+
+    def run(self):
+        try:
+            result = self.f(self.task, *self.args)
+            self.queue.put((self.index, result), False)
+        except KeyboardInterrupt:
+            pass  # Handled in caller
+
+
+def _map(f, tasks, args):
+    """
+    Multiprocessing map.
+
+    For each element ``task`` in ``tasks``, execute ``f(task, *args)``
+    in a separate process.
+
+    Returns a list of the return values in the correct order.
+    """
+    tasks = list(tasks)
+    result_queue = multiprocessing.Queue(len(tasks))
+    processes = []
+    for i, task in enumerate(tasks):
+        process = _Process(f, task, args, i, result_queue)
+        processes.append(process)
+        process.start()
+    running = lambda: any(p.is_alive() for p in processes)
+    try:
+        values = []
+        while (len(values) < len(tasks)) and running():
+            try:
+                values.append(result_queue.get(timeout=0.1))
+            except queue.Empty:
+                pass
+        if len(values) < len(tasks):
+            raise RuntimeError('Child process exited abnormally.')
+        values = sorted(values)
+    except KeyboardInterrupt:
+        # Wait until threads have finished before re-raising
+        while running():
+            time.sleep(0.1)
+        raise
+    return [v[1] for v in values]
+
+
+def _worker(targets, neighbors, values, kernel):
+    """
+    Internal worker for parallelizing ``clusterpolate``.
+    """
+    dists, inds = neighbors.radius_neighbors(targets)
+    predictions = np.zeros(targets.shape[0])
+    membership = np.zeros(targets.shape[0])
+    for i, (dist, ind) in enumerate(zip(dists, inds)):
+        weights = kernel(dist)
+        weights_sum = np.sum(weights)
+        if weights_sum > 0:
+            predictions[i] = np.sum(weights * values[ind]) / weights_sum
+            membership[i] = weights.max()
+    return predictions, membership
+
+
 def clusterpolate(points, values, targets, radius=1, kernel_factory=bump,
-                  neighbors=None):
+                  neighbors=None, num_jobs=None):
     """
     Clusterpolate data.
 
@@ -107,11 +187,14 @@ def clusterpolate(points, values, targets, radius=1, kernel_factory=bump,
     the default options. You can pass an instance that is configured
     to suit your data via the ``neighbors`` parameter.
 
+    By default, computations are parallelized according to the number
+    of available CPUs. Set ``num_jobs`` to a specific number to use
+    more or fewer parallel processes.
+
     Returns two arrays. The first contains the predicted value for the
     corresponding target point, and the second contains the target
     point's degree of membership (a float between 0 and 1).
     """
-
     # Accept lists as inputs
     points = np.array(points)
     values = np.array(values)
@@ -121,20 +204,14 @@ def clusterpolate(points, values, targets, radius=1, kernel_factory=bump,
 
     if neighbors is None:
         neighbors = sklearn.neighbors.NearestNeighbors(radius=radius)
+    neighbors.fit(points)
     kernel = kernel_factory(radius)
 
-    neighbors.fit(points)
-    dists, inds = neighbors.radius_neighbors(targets)
-
-    predictions = np.zeros(targets.shape[0])
-    membership = np.zeros(targets.shape[0])
-    for i, (dist, ind) in enumerate(zip(dists, inds)):
-        weights = kernel(dist)
-        weights_sum = np.sum(weights)
-        if weights_sum > 0:
-            predictions[i] = np.sum(weights * values[ind]) / weights_sum
-            membership[i] = weights.max()
-
+    num_jobs = min(num_jobs or multiprocessing.cpu_count(), targets.shape[0])
+    tasks = np.array_split(targets, num_jobs)
+    values = _map(_worker, tasks, (neighbors, values, kernel))
+    predictions = np.concatenate([v[0] for v in values])
+    membership = np.concatenate([v[1] for v in values])
     return predictions, membership
 
 
