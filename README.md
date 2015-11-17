@@ -45,6 +45,11 @@ function.
     pip install clusterpolate
 
 
+## Documentation
+
+The documentation is [hosted on ReadTheDocs](https://clusterpolate.readthedocs.org).
+
+
 ## History
 
 * *0.2.0:* Support for multiprocessing
