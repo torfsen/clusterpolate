@@ -44,3 +44,9 @@ function.
 
     pip install clusterpolate
 
+
+## History
+
+* *0.2.0:* Support for multiprocessing
+* *0.1.0:* First release
+
