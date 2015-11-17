@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 
 """
-Clusterpolate -- Inter- and extrapolation for clustered data.
+Clusterpolate: Inter- and extrapolation for clustered data.
 
 Traditional approaches for inter- and extrapolation of scattered data
 work on a filled rectangular area surrounding the data points or in
@@ -42,9 +42,6 @@ local values, as well as for a density estimation of the data. The
 latter is used to assign a membership degree to clusterpolated points:
 Points with a low membership degree lie in an area where there's just
 not enough data.
-
-Raw clusterpolation is available via :py:func:`clusterpolate` and images
-of clusterpolated data can be generated via :py:func:`image`.
 """
 
 from __future__ import (absolute_import, division, print_function,
@@ -219,7 +216,7 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     Create an image for clusterpolated data.
 
     ``points`` and ``values`` is the input data, see
-    :py:func:`clusterpolate`.
+    :py:func:`~.clusterpolate`.
 
     ``size`` is a 2-tuple containing the image dimensions.
 
@@ -235,11 +232,11 @@ def image(points, values, size, area=None, normalize=True, colormap=None,
     clusterpolated values. It should accept values in a 2D array and
     return the corresponding colors in an array of the same shape but
     with an extra dimension containing the RGB components (between 0 and
-    1). The olormaps shipped with :py:pkg:`matplotlib` are a good
-    choice. If no colormap is given then a grayscale image is generated.
+    1). The colormaps from :py:mod:`matplotlib.cm` are a good choice. If
+    no colormap is given then a grayscale image is generated.
 
     Any additional keyword-argument is passed on to
-    :py:func:`clusterpolate`.
+    :py:func:`~.clusterpolate`.
 
     This function returns 4 values: The first 3 are arrays containing
     the pixel coordinates, the clusterpolated values, and the membership

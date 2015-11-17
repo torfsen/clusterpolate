@@ -5,6 +5,7 @@
 /.coverage
 /coverage/
 /.tox/
+/docs/_build/
 
 *.pyc
 .*.swp
