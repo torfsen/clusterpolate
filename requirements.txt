@@ -1,4 +1,4 @@
-Pillow==2.3.0
+Pillow==10.0.1
 numpy==1.8.2
 scikit-learn==0.16.1
 scipy==0.13.3
